@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 월급에 딱 맞는 차</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Animations */
+        @keyframes bounce-slight {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(0); }
+        }
+        .animate-bounce-slight {
+            animation: bounce-slight 2s infinite ease-in-out;
+        }
+        /* Hide scrollbar for clean UI but keep functionality */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900 antialiased min-h-screen py-8 px-4">
+
+    <div class="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+        
+        <!-- Header -->
+        <div class="bg-blue-700 p-6 text-white text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-blue-300 to-blue-500 opacity-50"></div>
+            <h1 class="text-2xl font-bold mb-1">내 월급에 딱 맞는 차</h1>
+            <p class="text-blue-100 text-sm">허영부리지 말구 현실 직시하라</p>
+        </div>
+
+        <!-- Form Section -->
+        <div class="p-6 space-y-8" id="form-section">
+            
+            <!-- Income Section -->
+            <section>
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-1 h-5 bg-blue-600 rounded-full"></span>
+                    월 수입
+                </h2>
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            월 실수령액
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="salary" placeholder="0" class="num-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Expenses Section -->
+            <section>
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-1 h-5 bg-red-500 rounded-full"></span>
+                    월 지출
+                </h2>
+                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    
+                    <!-- Food -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-orange-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                            식비
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="foodCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Housing -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            주거비용
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="housingCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Transport -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>
+                            교통비
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="transportCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Date -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                            데이트 비용
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="dateCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Loan -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            대출 원리금
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="loanCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Medical -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v8"/><path d="M5 10h6"/><path d="M11.8 19.3a.3.3 0 1 0 .2.7H11a2 2 0 0 1-2-2v-5a6 6 0 0 1 6-6v0a6 6 0 0 1 6 6v5a2 2 0 0 1-2 2h-1a.2.2 0 1 0-.3-.3"/></svg>
+                            의료비
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="medicalCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Savings -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2h0V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
+                            저축/투자
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="savingsCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                    <!-- Others -->
+                    <div class="col-span-2 flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg class="text-blue-500 w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                            기타
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="otherCost" placeholder="0" class="num-input expense-input w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-right font-mono text-lg">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">만원</span>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Visual Flow Indicator -->
+            <div class="flex justify-center -my-4 relative z-10 text-gray-400">
+                <svg class="bg-white rounded-full text-blue-300 w-8 h-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l4 4 4-4"/><path d="M12 8v8"/></svg>
+            </div>
+
+            <!-- Real-time Summary -->
+            <section>
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-1 h-5 bg-green-500 rounded-full"></span>
+                    월 여유자금 분석
+                </h2>
+                
+                <div id="summary-box" class="p-6 rounded-xl border shadow-sm transition-all relative overflow-hidden bg-slate-50 border-slate-200">
+                    
+                    <!-- Background Decoration -->
+                    <div class="absolute -right-6 -bottom-6 opacity-5 pointer-events-none">
+                        <svg class="w-32 h-32" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+                    </div>
+
+                    <div class="flex flex-col gap-1 relative z-10">
+                        <div class="flex justify-between items-center text-sm text-gray-500 font-medium mb-2">
+                            <span>( 월 수입 - 월 지출 총합 )</span>
+                            <span class="bg-white/50 px-2 py-1 rounded text-xs border border-gray-100">자동 계산 결과</span>
+                        </div>
+                        
+                        <div class="flex items-baseline justify-end gap-1">
+                            <div id="disposable-income-display" class="text-5xl font-black tracking-tight transition-colors duration-300 text-blue-600">
+                                0
+                            </div>
+                            <span class="text-xl font-bold text-gray-500">만원</span>
+                        </div>
+
+                        <p id="warning-msg" class="hidden text-right text-red-500 text-xs font-bold mt-1 bg-red-100/50 py-1 px-2 rounded self-end">
+                            ⚠️ 지출이 수입을 초과했습니다. 소비를 줄이세요!
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Button -->
+            <button id="cta-button" class="bg-gray-300 text-gray-500 cursor-not-allowed w-full py-4 rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95" disabled>
+                <span id="cta-text" class="flex items-center gap-2">
+                    살 수 있는 게 있나..? 
+                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+                <span id="cta-loading" class="hidden flex items-center gap-2">
+                    <svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    현실 파악 중...
+                </span>
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="hidden fixed inset-0 bg-black/50 z-50 flex-col items-center justify-center backdrop-blur-sm">
+            <div class="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-xs text-center animate-bounce-slight">
+                <div class="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                <h3 class="text-lg font-bold text-slate-800">매물 스캔 중...</h3>
+                <p class="text-slate-500 text-sm mt-2">고객님의 여유자금 <span id="loading-budget"></span>만원에<br/>맞는 최적의 차량을 찾고 있습니다.</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden bg-slate-50 border-t border-gray-200">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <svg class="text-blue-600 w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                    추천 매물 TOP 10
+                </h2>
+                <p class="text-sm text-slate-500 mb-6">60개월 할부 기준, 월 납입금이 여유자금 이내인 매물입니다.</p>
+                
+                <div id="car-list-container" class="space-y-4">
+                    <!-- Car items will be injected here by JS -->
+                </div>
+
+                <div class="mt-8 text-center">
+                    <button id="reset-btn" class="text-sm text-gray-500 underline hover:text-gray-800">
+                        다시 계산하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Constants & Data
+        const CAR_MODELS = [
+            { name: "아반떼 CN7", brand: "Hyundai", basePrice: 1500 },
+            { name: "쏘나타 DN8", brand: "Hyundai", basePrice: 2000 },
+            { name: "그랜저 IG", brand: "Hyundai", basePrice: 2500 },
+            { name: "투싼 NX4", brand: "Hyundai", basePrice: 2300 },
+            { name: "싼타페 TM", brand: "Hyundai", basePrice: 2800 },
+            { name: "K5 DL3", brand: "Kia", basePrice: 2100 },
+            { name: "스포티지 NQ5", brand: "Kia", basePrice: 2400 },
+            { name: "쏘렌토 MQ4", brand: "Kia", basePrice: 3000 },
+            { name: "카니발 KA4", brand: "Kia", basePrice: 3200 },
+            { name: "레이 EV", brand: "Kia", basePrice: 1300 },
+            { name: "G80 RG3", brand: "Genesis", basePrice: 4500 },
+            { name: "GV70", brand: "Genesis", basePrice: 4800 },
+            { name: "BMW 3시리즈", brand: "BMW", basePrice: 3500 },
+            { name: "벤츠 C클래스", brand: "Benz", basePrice: 3800 },
+            { name: "미니 쿠퍼", brand: "Mini", basePrice: 2200 },
+        ];
+
+        let disposableIncome = 0;
+
+        // Elements
+        const inputs = document.querySelectorAll('.num-input');
+        const salaryInput = document.getElementById('salary');
+        const expenseInputs = document.querySelectorAll('.expense-input');
+        const displayIncome = document.getElementById('disposable-income-display');
+        const summaryBox = document.getElementById('summary-box');
+        const warningMsg = document.getElementById('warning-msg');
+        const ctaBtn = document.getElementById('cta-button');
+        const ctaText = document.getElementById('cta-text');
+        const ctaLoading = document.getElementById('cta-loading');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingBudget = document.getElementById('loading-budget');
+        const resultsSection = document.getElementById('results-section');
+        const carListContainer = document.getElementById('car-list-container');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // Helper functions
+        const parseNumber = (str) => Number(str.replace(/,/g, '')) || 0;
+        const formatNumber = (num) => num.toLocaleString('ko-KR');
+
+        // Event Listeners for Input Formatting and Calculation
+        inputs.forEach(input => {
+            input.addEventListener('input', function(e) {
+                // Remove non-digits
+                let val = this.value.replace(/[^0-9]/g, '');
+                
+                // Format with commas
+                if (val !== '') {
+                    this.value = formatNumber(Number(val));
+                } else {
+                    this.value = '';
+                }
+
+                // Hide results when typing
+                resultsSection.classList.add('hidden');
+                
+                calculateDisposableIncome();
+            });
+        });
+
+        function calculateDisposableIncome() {
+            const salary = parseNumber(salaryInput.value);
+            
+            let totalExpenses = 0;
+            expenseInputs.forEach(input => {
+                totalExpenses += parseNumber(input.value);
+            });
+
+            disposableIncome = salary - totalExpenses;
+            
+            // Update UI
+            displayIncome.textContent = formatNumber(disposableIncome);
+
+            if (disposableIncome < 0) {
+                displayIncome.classList.remove('text-blue-600');
+                displayIncome.classList.add('text-red-500');
+                summaryBox.classList.remove('bg-slate-50', 'border-slate-200');
+                summaryBox.classList.add('bg-red-50', 'border-red-200');
+                warningMsg.classList.remove('hidden');
+                
+                disableBtn();
+            } else {
+                displayIncome.classList.add('text-blue-600');
+                displayIncome.classList.remove('text-red-500');
+                summaryBox.classList.add('bg-slate-50', 'border-slate-200');
+                summaryBox.classList.remove('bg-red-50', 'border-red-200');
+                warningMsg.classList.add('hidden');
+
+                if (disposableIncome > 0 && salary > 0) {
+                    enableBtn();
+                } else {
+                    disableBtn();
+                }
+            }
+        }
+
+        function disableBtn() {
+            ctaBtn.disabled = true;
+            ctaBtn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:shadow-blue-500/30');
+            ctaBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        }
+
+        function enableBtn() {
+            ctaBtn.disabled = false;
+            ctaBtn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:shadow-blue-500/30');
+            ctaBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        }
+
+        // Generate Cars Action
+        ctaBtn.addEventListener('click', () => {
+            if (disposableIncome <= 0) return;
+
+            // Start Loading
+            ctaText.classList.add('hidden');
+            ctaLoading.classList.remove('hidden');
+            ctaBtn.disabled = true;
+            loadingBudget.textContent = formatNumber(disposableIncome);
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+            resultsSection.classList.add('hidden');
+
+            setTimeout(() => {
+                generateCarList();
+                
+                // Stop Loading
+                ctaText.classList.remove('hidden');
+                ctaLoading.classList.add('hidden');
+                ctaBtn.disabled = false;
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+                resultsSection.classList.remove('hidden');
+
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }, 2500);
+        });
+
+        function generateCarList() {
+            const budget = disposableIncome;
+            carListContainer.innerHTML = ''; // Clear previous
+            
+            for (let i = 0; i < 10; i++) {
+                const randomModel = CAR_MODELS[Math.floor(Math.random() * CAR_MODELS.length)];
+                const targetMonthly = Math.max(5, budget * (0.8 + (Math.random() * 0.2))); 
+                const estimatedTotalPrice = Math.floor(targetMonthly * 55); 
+                const year = 2019 + Math.floor(Math.random() * 5);
+                const km = Math.floor(Math.random() * 80000) + 10000;
+                const monthlyPayment = Math.floor(targetMonthly);
+                const imgColor = `hsl(${Math.random() * 360}, 70%, 80%)`;
+
+                const carHTML = `
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                        <div class="flex gap-4">
+                            <div class="w-24 h-24 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0" style="background-color: ${imgColor}">
+                                ${randomModel.brand}
+                            </div>
+                            <div class="flex-1 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex justify-between items-start">
+                                        <h3 class="font-bold text-lg text-slate-800">${randomModel.name}</h3>
+                                        <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded-full font-bold">인증</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1">${year}년식 · ${formatNumber(km)}km</p>
+                                </div>
+                                <div class="flex justify-between items-end mt-3">
+                                    <div class="text-right">
+                                        <p class="text-xs text-gray-400">총 차량가 ${formatNumber(estimatedTotalPrice)}만원</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-slate-500 font-medium mb-0.5">월 납입금</p>
+                                        <p class="text-blue-600 font-bold text-xl">
+                                            ${formatNumber(monthlyPayment)} <span class="text-sm">만원</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                carListContainer.insertAdjacentHTML('beforeend', carHTML);
+            }
+        }
+
+        // Reset
+        resetBtn.addEventListener('click', () => {
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            // Optional: clear inputs
+            // inputs.forEach(input => input.value = '');
+            // calculateDisposableIncome();
+            // resultsSection.classList.add('hidden');
+        });
+
+    </script>
+</body>
+</html>
