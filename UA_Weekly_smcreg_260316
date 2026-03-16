@@ -1,0 +1,753 @@
+WITH day_db AS (
+ SELECT DISTINCT DATE(DATE_TRUNC(TIMESTAMP(day), week(monday))) `Week`
+ FROM( SELECT day FROM UNNEST(GENERATE_DATE_ARRAY('2024-12-30', CURRENT_DATE()-1, INTERVAL 1 DAY)) AS day)
+)
+
+, googld_ads_adj AS (
+ SELECT CASE WHEN a.`Week` IS NOT NULL THEN a.`Week` ELSE b.`Week` END `Week`
+      , CASE WHEN a.campaign IS NOT NULL THEN a.campaign ELSE b.Campaign END campaign
+      , SUM(cast(b.Impr as numeric)) Impr
+      , SUM(cast(b.Cost as numeric)) as Cost
+      , SUM(cast(b.Click as numeric)) as Click
+      , SUM(cast(a.daus as numeric)) daus
+      , SUM(cast(a.waus as numeric)) waus
+      , SUM(cast(a.maus as numeric)) maus
+      , SUM(cast(a.installs as numeric)) installs
+      , SUM(cast(a.ctb_clk_t_events as numeric) + cast(a.purchased_common as numeric)) as Contact
+      , SUM(cast(a.smc1 as numeric) + cast(a.smc2 as numeric)) AS DB
+ FROM (
+          SELECT DATE(DATE_TRUNC(TIMESTAMP(JSON_EXTRACT_SCALAR(json_data, '$.day')), week(monday))) `Week`
+                , REGEXP_REPLACE(json_extract_scalar(json_data, '$.campaign'), r' \(\d+\)$', '') campaign
+                , REGEXP_REPLACE(json_extract_scalar(json_data, '$.adgroup'), r' \(\d+\)$', '') adgroup
+                , CASE WHEN json_extract_scalar(json_data, '$.creative_network') IN ('Search GoogleSearch', 'GoogleSearch') THEN 'Google 검색'
+                    WHEN json_extract_scalar(json_data, '$.creative_network') IN ('Search SearchPartners','SearchPartners') THEN '검색 파트너'
+                    WHEN json_extract_scalar(json_data, '$.creative_network') = 'Display' THEN 'Google 디스플레이 네트워크'
+                    WHEN json_extract_scalar(json_data, '$.creative_network') IN ('Youtube YouTubeVideos', 'YouTubeVideos') THEN 'YouTube' ELSE NULL END ads_creative
+                , SUM(cast(json_extract_scalar(json_data, '$.daus') as numeric)) daus
+                , SUM(cast(json_extract_scalar(json_data, '$.waus') as numeric)) waus
+                , SUM(cast(json_extract_scalar(json_data, '$.maus') as numeric)) maus
+                , SUM(cast(json_extract_scalar(json_data, '$.installs') as numeric)) installs
+                , SUM(cast(json_extract_scalar(json_data, '$.car_list_search_events') as numeric)) cls_event
+                , SUM(cast(json_extract_scalar(json_data, '$.car_detail_view_events') as numeric)) cdvw_events
+                , SUM(cast(json_extract_scalar(json_data, '$.purchased_car_detail_callbtn_click_events') as numeric)) ctb_events
+                , SUM(cast(json_extract_scalar(json_data, '$.pur_car_call_clk_t_events') as numeric)) ctb_clk_t_events
+                , SUM(cast(json_extract_scalar(json_data, '$.purchased_common_contact_ask_complete_events') as numeric)) purchased_common
+                , SUM(cast(json_extract_scalar(json_data, "$['smc_reg_complete (total)_events']") as numeric)) smc1
+                , SUM(cast(json_extract_scalar(json_data, "$['smc_re-reg_complete (total)_events']") as numeric)) smc2
+          FROM `local-now-763.ua_marketing.tb_adjust`
+          WHERE 1=1
+          AND json_extract_scalar(json_data, '$.channel') = 'Google Ads'
+          AND json_extract_scalar(json_data, '$.campaign') IN ('chut_app_ROAS_ACI (aos) (20680341752)', 'chut_app_ROAS (aos) (20672619833)', 'chut_app_install (aos) (13461530806)')
+
+          GROUP BY 1, 2, 3, 4
+          ) a
+
+     FULL JOIN (
+              SELECT DATE(DATE_TRUNC(TIMESTAMP(FORMAT_DATE('%Y-%m-%d', PARSE_DATE('%Y년 %m월 %d일', JSON_EXTRACT_SCALAR(json_data, '$.Day')))), week(monday))) `Week`
+                  , JSON_EXTRACT_SCALAR(json_data, '$.Campaign') Campaign
+                  , JSON_EXTRACT_SCALAR(json_data, '$.Network') Network
+                  , JSON_EXTRACT_SCALAR(json_data, '$.AdGroup') AdGroup
+                  , SUM(CAST(JSON_EXTRACT_SCALAR(json_data, '$.Cost') AS NUMERIC)) Cost
+                  , SUM(CAST(JSON_EXTRACT_SCALAR(json_data, '$.Impressions') AS NUMERIC)) Impr
+                  , SUM(CAST(JSON_EXTRACT_SCALAR(json_data, '$.Clicks') AS NUMERIC)) Click
+                  
+            FROM `local-now-763.ua_marketing.tb_google_ads_adgroup`
+            WHERE 1=1
+            AND JSON_EXTRACT_SCALAR(json_data, '$.Campaign') IN ('chut_app_ROAS_ACI (aos)', 'chut_app_ROAS (aos)', 'chut_app_install (aos)')
+
+            GROUP BY 1, 2, 3, 4) b
+  
+     ON a.`Week` = b.`Week`
+     AND a.campaign = b.Campaign
+     AND a.ads_creative = b.Network
+     AND a.adgroup = b.AdGroup
+
+     GROUP BY 1, 2
+     ORDER BY 1
+)
+
+, google_ads_amp AS (
+ SELECT d.`Week`
+     , SUM(IFNULL(Cost, 0)) Cost
+     , SUM(IFNULL(Impr, 0)) Impr
+     , SUM(IFNULL(Click, 0)) Click
+     , SUM(IFNULL(installs, 0)) installs
+     , AVG(ROUND(IFNULL(daus,0)/7, 2)) daus
+     , AVG(ROUND(IFNULL(waus,0)/7, 2)) waus
+     , AVG(ROUND(IFNULL(maus,0)/7, 2)) maus
+     , SUM(IFNULL(Contact, 0)) Contact
+     , SUM(IFNULL(DB, 0)) DB
+     , SUM(IFNULL(NU_Appopen_Users, 0)) NU_Appopen_Users
+     , SUM(IFNULL(NU_Appopen, 0)) NU_Appopen
+     , SUM(IFNULL(RU_Appopen_Users, 0)) RU_Appopen_Users
+     , SUM(IFNULL(RU_Appopen, 0)) RU_Appopen
+     , SUM(IFNULL(NU_Contact_Users, 0)) NU_Contact_Users
+     , SUM(IFNULL(NU_Contact, 0)) NU_Contact
+     , SUM(IFNULL(RU_Contact_Users, 0)) RU_Contact_Users
+     , SUM(IFNULL(RU_Contact, 0)) RU_Contact
+     , SUM(IFNULL(NU_DB_Users, 0)) NU_DB_Users
+     , SUM(IFNULL(NU_DB, 0)) NU_DB
+     , SUM(IFNULL(RU_DB_Users, 0)) RU_DB_Users
+     , SUM(IFNULL(RU_DB, 0)) RU_DB
+     , SUM(IFNULL(NU_CDV_Users, 0)) NU_CDV_Users
+     , SUM(IFNULL(NU_CDV, 0)) NU_CDV
+     , SUM(IFNULL(RU_CDV_Users, 0)) RU_CDV_Users
+     , SUM(IFNULL(RU_CDV, 0)) RU_CDV
+     , SUM(IFNULL(NU_2CDV_Users, 0)) NU_2CDV_Users
+     , SUM(IFNULL(NU_2CDV, 0)) NU_2CDV
+     , SUM(IFNULL(RU_2CDV_Users, 0)) RU_2CDV_Users
+     , SUM(IFNULL(RU_2CDV, 0)) RU_2CDV
+     , SUM(IFNULL(NU_3CDV_Users, 0)) NU_3CDV_Users
+     , SUM(IFNULL(NU_3CDV, 0)) NU_3CDV
+     , SUM(IFNULL(RU_3CDV_Users, 0)) RU_3CDV_Users
+     , SUM(IFNULL(RU_3CDV, 0)) RU_3CDV
+     , SUM(IFNULL(NU_wishcar_Users, 0)) NU_wishcar_Users
+     , SUM(IFNULL(NU_wishcar, 0)) NU_wishcar
+     , SUM(IFNULL(RU_wishcar_Users, 0)) RU_wishcar_Users
+     , SUM(IFNULL(RU_wishcar, 0)) RU_wishcar
+     , SUM(IFNULL(NU_CLS_Users, 0)) NU_CLS_Users
+     , SUM(IFNULL(NU_CLS, 0)) NU_CLS
+     , SUM(IFNULL(RU_CLS_Users, 0)) RU_CLS_Users
+     , SUM(IFNULL(RU_CLS, 0)) RU_CLS
+     , SUM(IFNULL(NU_CLS_import_domestic_Users, 0)) NU_CLS_import_domestic_Users
+     , SUM(IFNULL(NU_CLS_import_domestic, 0)) NU_CLS_import_domestic
+     , SUM(IFNULL(RU_CLS_import_domestic_Users, 0)) RU_CLS_import_domestic_Users
+     , SUM(IFNULL(RU_CLS_import_domestic, 0)) RU_CLS_import_domestic
+     , SUM(IFNULL(NU_CLS_box_icon_Users, 0)) NU_CLS_box_icon_Users
+     , SUM(IFNULL(NU_CLS_box_icon, 0)) NU_CLS_box_icon
+     , SUM(IFNULL(RU_CLS_box_icon_Users, 0)) RU_CLS_box_icon_Users
+     , SUM(IFNULL(RU_CLS_box_icon, 0)) RU_CLS_box_icon
+     , SUM(IFNULL(NU_ContactTry_Users, 0)) NU_ContactTry_Users
+     , SUM(IFNULL(NU_ContactTry, 0)) NU_ContactTry
+     , SUM(IFNULL(RU_ContactTry_Users, 0)) RU_ContactTry_Users
+     , SUM(IFNULL(RU_ContactTry, 0)) RU_ContactTry
+
+     FROM day_db d
+     
+     LEFT JOIN googld_ads_adj a
+     ON d.`Week` =  a.`Week`
+
+     LEFT JOIN `local-now-763.ua_marketing.amp_google_ads_weekly` b
+     ON a.`Week` = b.week_createdate
+     AND a.campaign = b.campaign
+
+     GROUP BY 1
+)
+
+, naver_week AS (
+    SELECT a.`Week`
+        , Impr
+        , Click
+        , Cost
+    FROM (SELECT DATE(DATE_TRUNC(TIMESTAMP(PARSE_DATE('%Y.%m.%d.', json_extract_scalar(json_data, '$.date'))), week(monday))) `Week`
+        , SUM(CAST(json_extract_scalar(json_data, '$.impression') AS FLOAT64)) Impr
+        , SUM(CAST(json_extract_scalar(json_data, '$.click') AS FLOAT64)) Click
+    FROM `local-now-763.ua_marketing.tb_naver`
+
+    WHERE 1=1
+    AND json_extract_scalar(json_data, '$.campaign_name') = '1.BS_M'
+
+    GROUP BY 1) a
+
+    LEFT JOIN (
+    SELECT DATE(DATE_TRUNC(TIMESTAMP(day), week(monday))) `Week`
+        , SUM(CAST(CASE WHEN day <= '2025-01-14' THEN 56667 ELSE 26667 END AS NUMERIC)) Cost
+    FROM( SELECT day FROM UNNEST(GENERATE_DATE_ARRAY('2024-12-30', CURRENT_DATE(), INTERVAL 1 DAY)) AS day)
+    GROUP BY 1) b
+    ON a.`Week` = b.`Week`
+)
+
+, naver_adj AS (
+    SELECT a.`Week`
+        , CAST(b.Impr AS numeric) Impr
+        , CAST(b.Click AS numeric) as Click
+        , CAST(Cost AS NUMERIC) as Cost
+        , CAST(a.installs AS numeric) installs
+        , CAST(a.daus AS numeric) daus
+        , CAST(a.waus AS numeric) waus
+        , CAST(a.maus AS numeric)maus
+        , CAST(a.Contact  AS numeric) as Contact
+        , CAST(a.DB AS numeric) as DB
+    FROM (SELECT DATE(DATE_TRUNC(TIMESTAMP(JSON_EXTRACT_SCALAR(json_data, '$.day')), week(monday))) `Week`
+            , SUM(CAST(json_extract_scalar(json_data, '$.installs') AS NUMERIC)) installs
+            , SUM(CAST(json_extract_scalar(json_data, '$.daus') AS NUMERIC)) daus
+            , SUM(CAST(json_extract_scalar(json_data, '$.waus') AS NUMERIC)) waus
+            , SUM(CAST(json_extract_scalar(json_data, '$.maus') AS NUMERIC)) maus
+            , SUM(CAST(json_extract_scalar(json_data, '$.pur_car_call_clk_t_events') AS NUMERIC)) +
+            SUM(CAST(json_extract_scalar(json_data, '$.purchased_common_contact_ask_complete_events') AS NUMERIC)) AS Contact
+            , SUM(CAST(json_extract_scalar(json_data, "$['smc_regist_complete (total)_events']") AS NUMERIC)) +
+              SUM(CAST(json_extract_scalar(json_data, "$['smc_reg_complete (total)_events']") AS NUMERIC)) +
+            SUM(CAST(json_extract_scalar(json_data, "$['smc_re-reg_complete (total)_events']") AS NUMERIC)) AS DB
+
+    FROM `local-now-763.ua_marketing.tb_adjust`
+
+    WHERE json_extract_scalar(json_data, '$.channel') = 'Naver_SA_Brand'
+    GROUP BY 1) a
+
+    LEFT JOIN naver_week b
+    ON a.`Week` = b.`Week`
+)
+
+, naver_m_amp AS (
+    SELECT d.`Week`
+     , SUM(Cost) Cost
+     , SUM(Impr) impression
+     , SUM(Click) Click
+     , SUM(installs) installs
+     , AVG(ROUND(IFNULL(daus,0)/7, 2)) daus
+     , AVG(ROUND(IFNULL(waus,0)/7, 2)) waus
+     , AVG(ROUND(IFNULL(maus,0)/7, 2)) maus
+     , SUM(Contact) Contact
+     , SUM(DB) DB
+     , SUM(IFNULL(NU_Appopen_Users, 0)) NU_Appopen_Users
+     , SUM(IFNULL(NU_Appopen, 0)) NU_Appopen
+     , SUM(IFNULL(RU_Appopen_Users, 0)) RU_Appopen_Users
+     , SUM(IFNULL(RU_Appopen, 0)) RU_Appopen
+     , SUM(IFNULL(NU_Contact_Users, 0)) NU_Contact_Users
+     , SUM(IFNULL(NU_Contact, 0)) NU_Contact
+     , SUM(IFNULL(RU_Contact_Users, 0)) RU_Contact_Users
+     , SUM(IFNULL(RU_Contact, 0)) RU_Contact
+     , SUM(IFNULL(NU_DB_Users, 0)) NU_DB_Users
+     , SUM(IFNULL(NU_DB, 0)) NU_DB
+     , SUM(IFNULL(RU_DB_Users, 0)) RU_DB_Users
+     , SUM(IFNULL(RU_DB, 0)) RU_DB
+     , SUM(IFNULL(NU_CDV_Users, 0)) NU_CDV_Users
+     , SUM(IFNULL(NU_CDV, 0)) NU_CDV
+     , SUM(IFNULL(RU_CDV_Users, 0)) RU_CDV_Users
+     , SUM(IFNULL(RU_CDV, 0)) RU_CDV
+     , SUM(IFNULL(NU_2CDV_Users, 0)) NU_2CDV_Users
+     , SUM(IFNULL(NU_2CDV, 0)) NU_2CDV
+     , SUM(IFNULL(RU_2CDV_Users, 0)) RU_2CDV_Users
+     , SUM(IFNULL(RU_2CDV, 0)) RU_2CDV
+     , SUM(IFNULL(NU_3CDV_Users, 0)) NU_3CDV_Users
+     , SUM(IFNULL(NU_3CDV, 0)) NU_3CDV
+     , SUM(IFNULL(RU_3CDV_Users, 0)) RU_3CDV_Users
+     , SUM(IFNULL(RU_3CDV, 0)) RU_3CDV
+     , SUM(IFNULL(NU_wishcar_Users, 0)) NU_wishcar_Users
+     , SUM(IFNULL(NU_wishcar, 0)) NU_wishcar
+     , SUM(IFNULL(RU_wishcar_Users, 0)) RU_wishcar_Users
+     , SUM(IFNULL(RU_wishcar, 0)) RU_wishcar
+     , SUM(IFNULL(NU_CLS_Users, 0)) NU_CLS_Users
+     , SUM(IFNULL(NU_CLS, 0)) NU_CLS
+     , SUM(IFNULL(RU_CLS_Users, 0)) RU_CLS_Users
+     , SUM(IFNULL(RU_CLS, 0)) RU_CLS
+     , SUM(IFNULL(NU_CLS_import_domestic_Users, 0)) NU_CLS_import_domestic_Users
+     , SUM(IFNULL(NU_CLS_import_domestic, 0)) NU_CLS_import_domestic
+     , SUM(IFNULL(RU_CLS_import_domestic_Users, 0)) RU_CLS_import_domestic_Users
+     , SUM(IFNULL(RU_CLS_import_domestic, 0)) RU_CLS_import_domestic
+     , SUM(IFNULL(NU_CLS_box_icon_Users, 0)) NU_CLS_box_icon_Users
+     , SUM(IFNULL(NU_CLS_box_icon, 0)) NU_CLS_box_icon
+     , SUM(IFNULL(RU_CLS_box_icon_Users, 0)) RU_CLS_box_icon_Users
+     , SUM(IFNULL(RU_CLS_box_icon, 0)) RU_CLS_box_icon
+     , SUM(IFNULL(NU_ContactTry_Users, 0)) NU_ContactTry_Users
+     , SUM(IFNULL(NU_ContactTry, 0)) NU_ContactTry
+     , SUM(IFNULL(RU_ContactTry_Users, 0)) RU_ContactTry_Users
+     , SUM(IFNULL(RU_ContactTry, 0)) RU_ContactTry
+    FROM day_db d
+
+    LEFT JOIN naver_adj a
+    ON d.`Week` = a.`Week`
+
+    LEFT JOIN `local-now-763.ua_marketing.amp_naver_m_weekly` b
+    ON a.`Week` = b.week_createdate
+
+    GROUP BY 1
+)
+
+
+, meta_adj AS (
+    SELECT a.`Week`
+         , a.installs
+         , daus
+         , waus
+         , maus
+         , Contact
+         , DB
+         , Impr
+         , spend
+         , Click
+    FROM (SELECT DATE(DATE_TRUNC(TIMESTAMP(JSON_EXTRACT_SCALAR(json_data, '$.day')), week(monday))) `Week`
+        , SUM(CAST(json_extract_scalar(json_data, '$.installs') AS NUMERIC)) installs
+        , SUM(CAST(json_extract_scalar(json_data, '$.daus') AS NUMERIC)) daus
+        , SUM(CAST(json_extract_scalar(json_data, '$.waus') AS NUMERIC)) waus
+        , SUM(CAST(json_extract_scalar(json_data, '$.maus') AS NUMERIC)) maus
+        , SUM(CAST(json_extract_scalar(json_data, '$.pur_car_call_clk_t_events') AS NUMERIC)) +
+          SUM(CAST(json_extract_scalar(json_data, '$.purchased_common_contact_ask_complete_events') AS NUMERIC)) AS Contact
+        , SUM(CAST(json_extract_scalar(json_data, "$['smc_regist_complete (total)_events']") AS NUMERIC)) +
+          SUM(CAST(json_extract_scalar(json_data, "$['smc_reg_complete (total)_events']") AS NUMERIC)) +
+          SUM(CAST(json_extract_scalar(json_data, "$['smc_re-reg_complete (total)_events']") AS NUMERIC)) AS DB
+    FROM `local-now-763.ua_marketing.tb_adjust`
+    WHERE json_extract_scalar(json_data, '$.channel') = 'Facebook'
+    GROUP BY 1) a
+
+    LEFT JOIN (
+      SELECT DATE(DATE_TRUNC(TIMESTAMP(JSON_EXTRACT_SCALAR(json_data, '$.date_stop')), week(monday))) `Week`
+        , SUM(CAST(json_extract_scalar(json_data, '$.impressions') AS NUMERIC)) Impr
+        , SUM(CAST(json_extract_scalar(json_data, '$.spend') AS NUMERIC)) spend
+        , SUM(CAST(json_extract_scalar(json_data, '$.clicks') AS NUMERIC)) Click
+      FROM `local-now-763.ua_marketing.tb_meta`
+      GROUP BY 1
+    ) b
+
+   ON a.`Week` = b.`Week`
+)
+
+, meta_amp AS (
+  SELECT d.`Week`
+        , SUM(spend) Cost
+        , SUM(Impr) impression
+        , SUM(Click) Click
+        , SUM(IFNULL(installs, 0)) installs
+        , AVG(ROUND(IFNULL(daus,0)/7, 2)) daus
+        , AVG(ROUND(IFNULL(waus,0)/7, 2)) waus
+        , AVG(ROUND(IFNULL(maus,0)/7, 2)) maus
+        , SUM(IFNULL(Contact, 0)) Contact
+        , SUM(IFNULL(DB, 0)) DB
+        , SUM(IFNULL(NU_Appopen_Users, 0)) NU_Appopen_Users
+        , SUM(IFNULL(NU_Appopen, 0)) NU_Appopen
+        , SUM(IFNULL(RU_Appopen_Users, 0)) RU_Appopen_Users
+        , SUM(IFNULL(RU_Appopen, 0)) RU_Appopen
+        , SUM(IFNULL(NU_Contact_Users, 0)) NU_Contact_Users
+        , SUM(IFNULL(NU_Contact, 0)) NU_Contact
+        , SUM(IFNULL(RU_Contact_Users, 0)) RU_Contact_Users
+        , SUM(IFNULL(RU_Contact, 0)) RU_Contact
+        , SUM(IFNULL(NU_DB_Users, 0)) NU_DB_Users
+        , SUM(IFNULL(NU_DB, 0)) NU_DB
+        , SUM(IFNULL(RU_DB_Users, 0)) RU_DB_Users
+        , SUM(IFNULL(RU_DB, 0)) RU_DB
+        , SUM(IFNULL(NU_CDV_Users, 0)) NU_CDV_Users
+        , SUM(IFNULL(NU_CDV, 0)) NU_CDV
+        , SUM(IFNULL(RU_CDV_Users, 0)) RU_CDV_Users
+        , SUM(IFNULL(RU_CDV, 0)) RU_CDV
+        , SUM(IFNULL(NU_2CDV_Users, 0)) NU_2CDV_Users
+        , SUM(IFNULL(NU_2CDV, 0)) NU_2CDV
+        , SUM(IFNULL(RU_2CDV_Users, 0)) RU_2CDV_Users
+        , SUM(IFNULL(RU_2CDV, 0)) RU_2CDV
+        , SUM(IFNULL(NU_3CDV_Users, 0)) NU_3CDV_Users
+        , SUM(IFNULL(NU_3CDV, 0)) NU_3CDV
+        , SUM(IFNULL(RU_3CDV_Users, 0)) RU_3CDV_Users
+        , SUM(IFNULL(RU_3CDV, 0)) RU_3CDV
+        , SUM(IFNULL(NU_wishcar_Users, 0)) NU_wishcar_Users
+        , SUM(IFNULL(NU_wishcar, 0)) NU_wishcar
+        , SUM(IFNULL(RU_wishcar_Users, 0)) RU_wishcar_Users
+        , SUM(IFNULL(RU_wishcar, 0)) RU_wishcar
+        , SUM(IFNULL(NU_CLS_Users, 0)) NU_CLS_Users
+        , SUM(IFNULL(NU_CLS, 0)) NU_CLS
+        , SUM(IFNULL(RU_CLS_Users, 0)) RU_CLS_Users
+        , SUM(IFNULL(RU_CLS, 0)) RU_CLS
+        , SUM(IFNULL(NU_CLS_import_domestic_Users, 0)) NU_CLS_import_domestic_Users
+        , SUM(IFNULL(NU_CLS_import_domestic, 0)) NU_CLS_import_domestic
+        , SUM(IFNULL(RU_CLS_import_domestic_Users, 0)) RU_CLS_import_domestic_Users
+        , SUM(IFNULL(RU_CLS_import_domestic, 0)) RU_CLS_import_domestic
+        , SUM(IFNULL(NU_CLS_box_icon_Users, 0)) NU_CLS_box_icon_Users
+        , SUM(IFNULL(NU_CLS_box_icon, 0)) NU_CLS_box_icon
+        , SUM(IFNULL(RU_CLS_box_icon_Users, 0)) RU_CLS_box_icon_Users
+        , SUM(IFNULL(RU_CLS_box_icon, 0)) RU_CLS_box_icon
+        , SUM(IFNULL(NU_ContactTry_Users, 0)) NU_ContactTry_Users
+        , SUM(IFNULL(NU_ContactTry, 0)) NU_ContactTry
+        , SUM(IFNULL(RU_ContactTry_Users, 0)) RU_ContactTry_Users
+        , SUM(IFNULL(RU_ContactTry, 0)) RU_ContactTry
+    FROM day_db d
+
+    LEFT JOIN meta_adj a
+    ON d.`Week` = a.`Week`
+
+    LEFT JOIN `local-now-763.ua_marketing.amp_meta_weekly` b
+    ON a.`Week` = b.week_createdate
+
+    GROUP BY 1
+)
+
+
+, adj_apple AS (
+     SELECT DATE(DATE_TRUNC(TIMESTAMP(json_extract_scalar(json_data, '$.day')), week(monday))) `Week`
+          , SUM(CAST(json_extract_scalar(json_data, '$.installs') AS NUMERIC)) installs
+          , SUM(CAST(json_extract_scalar(json_data, '$.daus') AS NUMERIC)) daus
+          , SUM(CAST(json_extract_scalar(json_data, '$.waus') AS NUMERIC)) waus
+          , SUM(CAST(json_extract_scalar(json_data, '$.maus') AS NUMERIC)) maus
+          , SUM(CAST(json_extract_scalar(json_data, '$.pur_car_call_clk_t_events') AS NUMERIC)) +
+          SUM(CAST(json_extract_scalar(json_data, '$.purchased_common_contact_ask_complete_events') AS NUMERIC)) AS Contact
+          , SUM(CAST(json_extract_scalar(json_data, "$['smc_regist_complete (total)_events']") AS NUMERIC)) +
+          SUM(CAST(json_extract_scalar(json_data, "$['smc_reg_complete (total)_events']") AS NUMERIC)) +
+          SUM(CAST(json_extract_scalar(json_data, "$['smc_re-reg_complete (total)_events']") AS NUMERIC)) AS DB
+
+     FROM `local-now-763.ua_marketing.tb_adjust`
+
+     WHERE json_extract_scalar(json_data, '$.channel') = 'Apple'
+     GROUP BY 1
+)
+
+, apple_amp AS (
+ SELECT d.`Week`
+        , 0 Cost
+        , 0 Impr
+        , 0 Click
+        , SUM(IFNULL(installs, 0)) installs
+        , AVG(ROUND(IFNULL(daus,0)/7, 2)) daus
+        , AVG(ROUND(IFNULL(waus,0)/7, 2)) waus
+        , AVG(ROUND(IFNULL(maus,0)/7, 2)) maus
+        , SUM(IFNULL(Contact, 0)) Contact
+        , SUM(IFNULL(DB, 0)) DB
+        , SUM(IFNULL(NU_Appopen_Users, 0)) NU_Appopen_Users
+        , SUM(IFNULL(NU_Appopen, 0)) NU_Appopen
+        , SUM(IFNULL(RU_Appopen_Users, 0)) RU_Appopen_Users
+        , SUM(IFNULL(RU_Appopen, 0)) RU_Appopen
+        , SUM(IFNULL(NU_Contact_Users, 0)) NU_Contact_Users
+        , SUM(IFNULL(NU_Contact, 0)) NU_Contact
+        , SUM(IFNULL(RU_Contact_Users, 0)) RU_Contact_Users
+        , SUM(IFNULL(RU_Contact, 0)) RU_Contact
+        , SUM(IFNULL(NU_DB_Users, 0)) NU_DB_Users
+        , SUM(IFNULL(NU_DB, 0)) NU_DB
+        , SUM(IFNULL(RU_DB_Users, 0)) RU_DB_Users
+        , SUM(IFNULL(RU_DB, 0)) RU_DB
+        , SUM(IFNULL(NU_CDV_Users, 0)) NU_CDV_Users
+        , SUM(IFNULL(NU_CDV, 0)) NU_CDV
+        , SUM(IFNULL(RU_CDV_Users, 0)) RU_CDV_Users
+        , SUM(IFNULL(RU_CDV, 0)) RU_CDV
+        , SUM(IFNULL(NU_2CDV_Users, 0)) NU_2CDV_Users
+        , SUM(IFNULL(NU_2CDV, 0)) NU_2CDV
+        , SUM(IFNULL(RU_2CDV_Users, 0)) RU_2CDV_Users
+        , SUM(IFNULL(RU_2CDV, 0)) RU_2CDV
+        , SUM(IFNULL(NU_3CDV_Users, 0)) NU_3CDV_Users
+        , SUM(IFNULL(NU_3CDV, 0)) NU_3CDV
+        , SUM(IFNULL(RU_3CDV_Users, 0)) RU_3CDV_Users
+        , SUM(IFNULL(RU_3CDV, 0)) RU_3CDV
+        , SUM(IFNULL(NU_wishcar_Users, 0)) NU_wishcar_Users
+        , SUM(IFNULL(NU_wishcar, 0)) NU_wishcar
+        , SUM(IFNULL(RU_wishcar_Users, 0)) RU_wishcar_Users
+        , SUM(IFNULL(RU_wishcar, 0)) RU_wishcar
+        , SUM(IFNULL(NU_CLS_Users, 0)) NU_CLS_Users
+        , SUM(IFNULL(NU_CLS, 0)) NU_CLS
+        , SUM(IFNULL(RU_CLS_Users, 0)) RU_CLS_Users
+        , SUM(IFNULL(RU_CLS, 0)) RU_CLS
+        , SUM(IFNULL(NU_CLS_import_domestic_Users, 0)) NU_CLS_import_domestic_Users
+        , SUM(IFNULL(NU_CLS_import_domestic, 0)) NU_CLS_import_domestic
+        , SUM(IFNULL(RU_CLS_import_domestic_Users, 0)) RU_CLS_import_domestic_Users
+        , SUM(IFNULL(RU_CLS_import_domestic, 0)) RU_CLS_import_domestic
+        , SUM(IFNULL(NU_CLS_box_icon_Users, 0)) NU_CLS_box_icon_Users
+        , SUM(IFNULL(NU_CLS_box_icon, 0)) NU_CLS_box_icon
+        , SUM(IFNULL(RU_CLS_box_icon_Users, 0)) RU_CLS_box_icon_Users
+        , SUM(IFNULL(RU_CLS_box_icon, 0)) RU_CLS_box_icon
+        , SUM(IFNULL(NU_ContactTry_Users, 0)) NU_ContactTry_Users
+        , SUM(IFNULL(NU_ContactTry, 0)) NU_ContactTry
+        , SUM(IFNULL(RU_ContactTry_Users, 0)) RU_ContactTry_Users
+        , SUM(IFNULL(RU_ContactTry, 0)) RU_ContactTry
+    FROM day_db d
+
+    LEFT JOIN adj_apple a
+    ON d.`Week` = a.`Week`
+
+    LEFT JOIN `local-now-763.ua_marketing.amp_apple_weekly` b
+    ON a.`Week` = b.week_createdate
+
+    GROUP BY 1
+)
+
+, naver_pc AS (
+    SELECT d.`Week`
+        , campaign
+        , Impr
+        , Click
+        , Cost
+    FROM day_db d
+    
+    LEFT JOIN (
+            SELECT DATE(DATE_TRUNC(createdate, week(monday))) `Week`
+                 , campaign
+                 , SUM(Impr) Impr
+                 , SUM(Click) Click
+                 , SUM(Cost) Cost
+            FROM (SELECT DATE(TIMESTAMP(FORMAT_DATE('%Y-%m-%d', PARSE_DATE('%Y.%m.%d.', json_extract_scalar(json_data, '$.date'))))) createdate
+                      , "NB PC" campaign
+                      , SUM(IFNULL(CAST(json_extract_scalar(json_data, '$.impression') AS numeric),0)) Impr
+                      , SUM (IFNULL(CAST(json_extract_scalar(json_data, '$.click') AS numeric),0)) Click
+                      , CAST(20000 as numeric) as Cost
+                  FROM `local-now-763.ua_marketing.tb_naver`
+                  
+                  WHERE json_extract_scalar(json_data, '$.mediaType') = 'PC'
+                  GROUP BY 1, 2)
+            GROUP BY 1, 2
+    )b
+    ON d.`Week` = b.`Week`
+)
+
+
+, dv360_adj AS (
+ SELECT a.week_createdate
+      , SUM(cast(b.Impr as numeric)) Impr
+      , SUM(cast(b.Cost as numeric)) as Cost
+      , SUM(cast(b.Click as numeric)) as Click
+      , SUM(cast(a.daus as numeric)) daus
+      , SUM(cast(a.waus as numeric)) waus
+      , SUM(cast(a.maus as numeric)) maus
+      , SUM(cast(a.installs as numeric)) installs
+      , SUM(cast(a.ctb_clk_t_events as numeric) + cast(a.purchased_common as numeric)) as Contact
+      , SUM(cast(a.smc1 as numeric) + cast(a.smc2 as numeric)) AS DB
+ FROM (
+          SELECT DATE(DATE_TRUNC(TIMESTAMP(JSON_EXTRACT_SCALAR(json_data, '$.day')), week(monday))) week_createdate
+              , AVG(CAST(json_extract_scalar(json_data, '$.daus') AS NUMERIC)) daus
+              , AVG(CAST(json_extract_scalar(json_data, '$.waus') AS NUMERIC)) waus
+              , AVG(CAST(json_extract_scalar(json_data, '$.maus')  AS NUMERIC))maus
+              , SUM(CAST(json_extract_scalar(json_data, '$.installs')  AS NUMERIC))installs
+              , SUM(CAST(json_extract_scalar(json_data, '$.car_list_search_events')  AS NUMERIC)) cls_event
+              , SUM(CAST(json_extract_scalar(json_data, '$.car_detail_view_events')  AS NUMERIC)) cdvw_events
+              , SUM(CAST(json_extract_scalar(json_data, '$.purchased_car_detail_callbtn_click_events')  AS NUMERIC))ctb_events
+              , SUM(CAST(json_extract_scalar(json_data, '$.pur_car_call_clk_t_events') AS NUMERIC)) ctb_clk_t_events
+              , SUM(CAST(json_extract_scalar(json_data, '$.purchased_common_contact_ask_complete_events') AS NUMERIC)) purchased_common
+              , SUM(CAST(json_extract_scalar(json_data, "$['smc_regist_complete (total)_events']") AS NUMERIC))
+                + SUM(CAST(json_extract_scalar(json_data, "$['smc_reg_complete (total)_events']") AS NUMERIC)) smc1
+              , SUM(CAST(json_extract_scalar(json_data, "$['smc_re-reg_complete (total)_events']") AS NUMERIC)) smc2
+          FROM `local-now-763.ua_marketing.tb_adjust`
+          WHERE 1=1
+            AND JSON_EXTRACT_SCALAR(json_data, '$.channel') = 'Google Marketing Platform'
+            AND JSON_EXTRACT_SCALAR(json_data, '$.network') = 'Display & Video 360'
+            AND JSON_EXTRACT_SCALAR(json_data, '$.campaign') IN ('Display (1020348180)',
+                    'Display (1020451401)', 'Display (1020674953)', 'unknown')
+            AND JSON_EXTRACT_SCALAR(json_data, '$.adgroup') IN ('[Amplitude] AOS_90days (22417816950)',
+                    'App Open 30days_No CDV&Try&CTB (22324682625)', 'App Open 30days_No CTB (22334861749)',
+                    '[Amplitude] AOS_90days (22417808571)', 'App Open 30days_No CDV&Try&CTB (22354719503)',
+                    'App Open 30days_No CTB (22348360503)', 'App Open 30days_No CDV&Try&CTB (22331177462)',
+                    'App Open 30days_No CTB (22331178386)', 'unknown')
+            AND JSON_EXTRACT_SCALAR(json_data, '$.creative') IN ('645608399','645608798','645640992','647531380',
+                    '647531675','647563397','647533379','645647690','unknown')
+            AND JSON_EXTRACT_SCALAR(json_data, '$.day') >= '2025-03-17' -- 25/3/19부터 광고시작
+          GROUP BY 1
+          ) a
+
+     LEFT JOIN (
+              SELECT DATE(DATE_TRUNC(TIMESTAMP(CAST(Date AS STRING)), week(monday))) week_createdate
+                  , SUM( SAFE_CAST ( REGEXP_REPLACE(Revenue__Adv_Currency_, r'[₩,-]', '') AS INT64)) Cost
+                  , SUM(Impressions) Impr
+                  , SUM(Clicks) Click
+                  
+              FROM `local-now-763.ua_marketing.tb_dv360`
+
+              GROUP BY 1
+              ) b
+  
+     ON a.week_createdate = b.week_createdate
+
+     GROUP BY 1
+     ORDER BY 1
+)
+
+
+, dv360_amp AS (
+ SELECT d.`Week`
+     , SUM(IFNULL(Cost, 0)) Cost
+     , SUM(IFNULL(Impr, 0)) impression
+     , SUM(IFNULL(Click, 0)) Click
+     , SUM(IFNULL(installs, 0)) installs
+     , AVG(ROUND(IFNULL(daus,0)/7, 2)) daus
+     , AVG(ROUND(IFNULL(waus,0)/7, 2)) waus
+     , SUM(ROUND(IFNULL(maus,0)/7, 2)) maus
+     , SUM(IFNULL(Contact, 0)) Contact
+     , SUM(IFNULL(DB, 0)) DB
+     , SUM(IFNULL(NU_Appopen_Users, 0)) NU_Appopen_Users
+     , SUM(IFNULL(NU_Appopen, 0)) NU_Appopen
+     , SUM(IFNULL(RU_Appopen_Users, 0)) RU_Appopen_Users
+     , SUM(IFNULL(RU_Appopen, 0)) RU_Appopen
+     , SUM(IFNULL(NU_Contact_Users, 0)) NU_Contact_Users
+     , SUM(IFNULL(NU_Contact, 0)) NU_Contact
+     , SUM(IFNULL(RU_Contact_Users, 0)) RU_Contact_Users
+     , SUM(IFNULL(RU_Contact, 0)) RU_Contact
+     , SUM(IFNULL(NU_DB_Users, 0)) NU_DB_Users
+     , SUM(IFNULL(NU_DB, 0)) NU_DB
+     , SUM(IFNULL(RU_DB_Users, 0)) RU_DB_Users
+     , SUM(IFNULL(RU_DB, 0)) RU_DB
+     , SUM(IFNULL(NU_CDV_Users, 0)) NU_CDV_Users
+     , SUM(IFNULL(NU_CDV, 0)) NU_CDV
+     , SUM(IFNULL(RU_CDV_Users, 0)) RU_CDV_Users
+     , SUM(IFNULL(RU_CDV, 0)) RU_CDV
+     , SUM(IFNULL(NU_2CDV_Users, 0)) NU_2CDV_Users
+     , SUM(IFNULL(NU_2CDV, 0)) NU_2CDV
+     , SUM(IFNULL(RU_2CDV_Users, 0)) RU_2CDV_Users
+     , SUM(IFNULL(RU_2CDV, 0)) RU_2CDV
+     , SUM(IFNULL(NU_3CDV_Users, 0)) NU_3CDV_Users
+     , SUM(IFNULL(NU_3CDV, 0)) NU_3CDV
+     , SUM(IFNULL(RU_3CDV_Users, 0)) RU_3CDV_Users
+     , SUM(IFNULL(RU_3CDV, 0)) RU_3CDV
+     , SUM(IFNULL(NU_wishcar_Users, 0)) NU_wishcar_Users
+     , SUM(IFNULL(NU_wishcar, 0)) NU_wishcar
+     , SUM(IFNULL(RU_wishcar_Users, 0)) RU_wishcar_Users
+     , SUM(IFNULL(RU_wishcar, 0)) RU_wishcar
+     , SUM(IFNULL(NU_CLS_Users, 0)) NU_CLS_Users
+     , SUM(IFNULL(NU_CLS, 0)) NU_CLS
+     , SUM(IFNULL(RU_CLS_Users, 0)) RU_CLS_Users
+     , SUM(IFNULL(RU_CLS, 0)) RU_CLS
+     , SUM(IFNULL(NU_CLS_import_domestic_Users, 0)) NU_CLS_import_domestic_Users
+     , SUM(IFNULL(NU_CLS_import_domestic, 0)) NU_CLS_import_domestic
+     , SUM(IFNULL(RU_CLS_import_domestic_Users, 0)) RU_CLS_import_domestic_Users
+     , SUM(IFNULL(RU_CLS_import_domestic, 0)) RU_CLS_import_domestic
+     , SUM(IFNULL(NU_CLS_box_icon_Users, 0)) NU_CLS_box_icon_Users
+     , SUM(IFNULL(NU_CLS_box_icon, 0)) NU_CLS_box_icon
+     , SUM(IFNULL(RU_CLS_box_icon_Users, 0)) RU_CLS_box_icon_Users
+     , SUM(IFNULL(RU_CLS_box_icon, 0)) RU_CLS_box_icon
+     , SUM(IFNULL(NU_ContactTry_Users, 0)) NU_ContactTry_Users
+     , SUM(IFNULL(NU_ContactTry, 0)) NU_ContactTry
+     , SUM(IFNULL(RU_ContactTry_Users, 0)) RU_ContactTry_Users
+     , SUM(IFNULL(RU_ContactTry, 0)) RU_ContactTry
+
+     FROM day_db d
+     
+     LEFT JOIN dv360_adj a
+     ON d.`Week` =  a.week_createdate
+
+     LEFT JOIN `local-now-763.ua_marketing.amp_dv360_weekly` b
+     ON a.week_createdate = b.week_createdate
+
+     WHERE d.`Week` >= '2025-03-17'
+
+     GROUP BY 1
+)
+
+
+
+SELECT `Week`
+, SUM(Impr) Impr
+, SUM(Click) Click
+, SUM(Cost) Cost
+
+, AVG(daus) daus
+, AVG(waus) waus
+, AVG(maus) maus
+, SUM(installs) installs 
+
+, SUM(Contact) Contact
+, SUM(DB) DB
+
+, SUM(NU_Appopen_Users) NU_Appopen_Users
+, SUM(RU_Appopen_Users) RU_Appopen_Users
+
+, SUM(NU_CLS_Users) NU_CLS_Users
+, SUM(NU_CLS) NU_CLS
+, SUM(RU_CLS_Users) RU_CLS_Users
+, SUM(RU_CLS) RU_CLS
+
+, SUM(NU_CLS_box_icon_Users) NU_CLS_box_icon_Users
+, SUM(NU_CLS_box_icon) NU_CLS_box_icon
+, SUM(RU_CLS_box_icon_Users) RU_CLS_box_icon_Users
+, SUM(RU_CLS_box_icon) RU_CLS_box_icon
+
+, SUM(NU_CLS_import_domestic_Users) NU_CLS_import_domestic_Users
+, SUM(NU_CLS_import_domestic) NU_CLS_import_domestic
+, SUM(RU_CLS_import_domestic_Users) RU_CLS_import_domestic_Users
+, SUM(RU_CLS_import_domestic) RU_CLS_import_domestic
+
+, SUM(NU_CDV_Users) NU_CDV_Users
+, SUM(NU_CDV) NU_CDV
+, SUM(RU_CDV_Users) RU_CDV_Users
+, SUM(RU_CDV) RU_CDV
+
+, SUM(NU_ContactTry_Users) NU_ContactTry_Users
+, SUM(NU_ContactTry) NU_ContactTry
+, SUM(RU_ContactTry_Users) RU_ContactTry_Users
+, SUM(RU_ContactTry) RU_ContactTry
+
+, SUM(NU_Contact_Users) NU_Contact_Users
+, SUM(NU_Contact) NU_Contact
+, SUM(RU_Contact_Users) RU_Contact_Users
+, SUM(RU_Contact) RU_Contact
+
+, SUM(NU_DB_Users) NU_DB_Users
+, SUM(NU_DB) NU_DB
+, SUM(RU_DB_Users) RU_DB_Users
+, SUM(RU_DB) RU_DB
+
+, SUM(NU_wishcar_Users) NU_wishcar_Users
+, SUM(NU_wishcar) NU_wishcar
+, SUM(RU_wishcar_Users) RU_wishcar_Users
+, SUM(RU_wishcar) RU_wishcar
+
+, SUM(NU_2CDV_Users) NU_2CDV_Users
+, SUM(NU_2CDV) NU_2CDV
+, SUM(RU_2CDV_Users) RU_2CDV_Users
+, SUM(RU_2CDV) RU_2CDV
+FROM (
+    SELECT *
+    FROM google_ads_amp
+
+    UNION ALL
+
+    SELECT *
+    FROM meta_amp
+
+    UNION ALL
+
+    SELECT *
+    FROM naver_m_amp
+
+    UNION ALL
+
+    SELECT *
+    FROM apple_amp
+
+    UNION ALL
+
+    SELECT *
+    FROM dv360_amp
+
+    UNION ALL
+
+    SELECT `Week`
+    , Cost
+    , Impr
+    , Click
+    , 0 installs
+    , 0 daus
+    , 0 waus
+    , 0 maus
+    , 0 Contact
+    , 0 DB
+    , 0 NU_Appopen_Users
+    , 0 NU_Appopen
+    , 0 RU_Appopen_Users
+    , 0 RU_Appopen
+    , 0 NU_Contact_Users
+    , 0 NU_Contact
+    , 0 RU_Contact_Users
+    , 0 RU_Contact
+    , 0 NU_DB_Users
+    , 0 NU_DB
+    , 0 RU_DB_Users
+    , 0 RU_DB
+    , 0 NU_CDV_Users
+    , 0 NU_CDV
+    , 0 RU_CDV_Users
+    , 0 RU_CDV
+    , 0 NU_2CDV_Users
+    , 0 NU_2CDV
+    , 0 RU_2CDV_Users
+    , 0 RU_2CDV
+    , 0 NU_3CDV_Users
+    , 0 NU_3CDV
+    , 0 RU_3CDV_Users
+    , 0 RU_3CDV
+    , 0 NU_wishcar_Users
+    , 0 NU_wishcar
+    , 0 RU_wishcar_Users
+    , 0 RU_wishcar
+    , 0 NU_CLS_Users
+    , 0 NU_CLS
+    , 0 RU_CLS_Users
+    , 0 RU_CLS
+    , 0 NU_CLS_import_domestic_Users
+    , 0 NU_CLS_import_domestic
+    , 0 RU_CLS_import_domestic_Users
+    , 0 RU_CLS_import_domestic
+    , 0 NU_CLS_box_icon_Users
+    , 0 NU_CLS_box_icon
+    , 0 RU_CLS_box_icon_Users
+    , 0 RU_CLS_box_icon
+    , 0 NU_ContactTry_Users
+    , 0 NU_ContactTry
+    , 0 RU_ContactTry_Users
+    , 0 RU_ContactTry
+
+    FROM naver_pc
+)
+
+WHERE DATE(`Week`) = DATE_TRUNC(CURRENT_DATE(), week(monday)) - 7
+
+
+GROUP BY 1
